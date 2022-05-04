@@ -53,22 +53,14 @@ class TestMainVerticle {
         try {
           val con = pool.connection.await()
           val trx = con.begin().await()
-          con.query("select 1 from dual")
-            .execute()
-            .await()
-            .forEach { it.getString(0) }
+          val res = con.query("select * from dual").execute().await()
+          res.forEach { it.getString(0) }
           trx.commit().await()
           con.close().await()
         } catch (t: Throwable) {
+          println("Exception caught in run $run")
           testContext.failNow(t)
           return@launch
-        }
-
-        if (run > 0 && run % 5000 == 0) {
-          val result = pool.query(
-            "SELECT  max(a.value) as highest_open_cur, p.value as max_open_cur FROM v\$sesstat a, v\$statname b, v\$parameter p WHERE  a.statistic# = b.statistic#  and b.name = 'opened cursors current' and p.name= 'open_cursors' group by p.value\n"
-          ).execute().await()
-          result.forEach { println(it.toJson()) }
         }
       }
     }
